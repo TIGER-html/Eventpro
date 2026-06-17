@@ -3,14 +3,18 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// ÉTAPE 1 - Inscription
+// INSCRIPTION
 exports.register = async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone, role } = req.body;
+    const { first_name, last_name, email, password, phone, role, ville } = req.body;
 
     if (!first_name || !email || !password) {
       return res.status(400).json({ message: "Prénom, email et mot de passe sont obligatoires" });
     }
+
+    // Validation du rôle
+    const rolesAutorises = ['client', 'prestataire', 'admin', 'organisateur'];
+    const roleChoisi = rolesAutorises.includes(role) ? role : 'client';
 
     const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
@@ -20,22 +24,34 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await pool.query(
-      `INSERT INTO users (first_name, last_name, email, password, phone, role)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, first_name, last_name, email, role`,
-      [first_name, last_name, email, hashedPassword, phone, role || 'client']
+      `INSERT INTO users (first_name, last_name, email, password, phone, role, ville)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, first_name, last_name, email, role`,
+      [first_name, last_name, email, hashedPassword, phone, roleChoisi, ville || null]
+    );
+
+    const user = newUser.rows[0];
+
+    // Générer le token directement à l'inscription
+    const token = jwt.sign(
+      { id: user.id, role: user.role, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
     );
 
     res.status(201).json({
       message: "Compte créé avec succès",
-      user: newUser.rows[0]
+      token,
+      user
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Erreur serveur lors de l'inscription" });
   }
 };
 
-// ÉTAPE 1 - Connexion
+// CONNEXION
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -73,6 +89,7 @@ exports.login = async (req, res) => {
         role: user.role
       }
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Erreur serveur lors de la connexion" });

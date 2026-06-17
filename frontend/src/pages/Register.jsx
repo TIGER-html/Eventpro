@@ -27,15 +27,40 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setSuccess(''); setLoading(true);
-    if (!form.phone) { setError('Veuillez entrer un numéro de téléphone valide.'); setLoading(false); return; }
+    if (!form.phone) {
+      setError('Veuillez entrer un numéro de téléphone valide.');
+      setLoading(false);
+      return;
+    }
     try {
-      await api.post('/auth/register', form);
-      setSuccess('Compte créé avec succès ! Redirection vers la connexion...');
-      setTimeout(() => navigate('/login'), 1500);
+      const res = await api.post('/auth/register', form);
+      const { token, user } = res.data;
+
+      // Sauvegarder token et user directement
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      setSuccess('Compte créé avec succès ! Redirection...');
+
+      // Redirection immédiate selon le rôle
+      setTimeout(() => {
+        if (user.role === 'admin') navigate('/admin/dashboard');
+        else if (user.role === 'prestataire') navigate('/provider/dashboard');
+        else navigate('/client/dashboard');
+      }, 1000);
+
     } catch (err) {
       setError(err.response?.data?.message || "Erreur lors de l'inscription");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const roleOptions = [
+    { value: 'client', label: '🎉 Client (j\'organise un événement)' },
+    { value: 'prestataire', label: '🛎️ Prestataire de service' },
+    { value: 'admin', label: '⚙️ Administrateur' },
+  ];
 
   return (
     <div className="min-h-[calc(100vh-72px)] flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-accent-400/10 px-4 py-12">
@@ -92,13 +117,26 @@ function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-primary-900 mb-1">Vous êtes</label>
-            <select name="role" value={form.role} onChange={handleChange}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white">
-              <option value="client">🎉 Client (j'organise un événement)</option>
-              <option value="prestataire">🛎️ Prestataire de service</option>
-              <option value="organisateur">📋 Organisateur / Agence</option>
-            </select>
+            <label className="block text-sm font-medium text-primary-900 mb-2">Vous êtes</label>
+            <div className="flex flex-col gap-2">
+              {roleOptions.map(opt => (
+                <label key={opt.value}
+                  className={`flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer transition-all
+                    ${form.role === opt.value
+                      ? 'border-primary-600 bg-primary-50 text-primary-900 font-semibold'
+                      : 'border-gray-200 hover:border-primary-300 text-gray-700'}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value={opt.value}
+                    checked={form.role === opt.value}
+                    onChange={handleChange}
+                    className="accent-primary-600"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
           </div>
 
           <button type="submit" disabled={loading}

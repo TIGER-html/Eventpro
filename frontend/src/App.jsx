@@ -50,6 +50,17 @@ function PublicLayout({ children }) {
   return <><Navbar />{children}</>;
 }
 
+function getRoleDashboard() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role === 'admin') return '/admin/dashboard';
+    if (user.role === 'prestataire') return '/provider/dashboard';
+    return '/client/dashboard';
+  } catch {
+    return '/client/dashboard';
+  }
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -236,7 +247,7 @@ function App() {
         } />
 
         {/* ═══ REDIRECTIONS ═══ */}
-        <Route path="/dashboard" element={<Navigate to="/client/dashboard" />} />
+        <Route path="/dashboard" element={<Navigate to={getRoleDashboard()} />} />
         <Route path="/create-event" element={<Navigate to="/client/events" />} />
         <Route path="*" element={<Navigate to="/" />} />
 
