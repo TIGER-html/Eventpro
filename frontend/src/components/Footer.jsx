@@ -72,7 +72,7 @@ function Footer() {
               <li>📍 Yaoundé, Cameroun</li>
               <li>
                 <a href="tel:+237600000000" className="hover:text-accent-400 transition-colors">
-                  📞 +237 6XX XXX XXX
+                  📞 +237 683 724 238
                 </a>
               </li>
               <li>
